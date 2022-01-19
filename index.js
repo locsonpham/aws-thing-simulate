@@ -10,6 +10,33 @@ require("dotenv").config();
 // to connect with a client identifier which is already in use, the existing
 // connection will be terminated.
 //
+var clientId = process.env.CLIENT_ID;
+
+// var device = awsIot.device({
+//   keyPath: process.env.AWS_PRIVATE_KEY_PATH,
+//   certPath: process.env.AWS_CERT_PATH,
+//   caPath: process.env.AWS_CA_PATH,
+//   clientId: process.env.CLIENT_ID,
+//   host: process.env.AWS_HOST,
+// });
+
+// //
+// // Device is an instance returned by mqtt.Client(), see mqtt.js for full
+// // documentation.
+// //
+// device.on("connect", function () {
+//   console.log("connect");
+//   device.subscribe(`demeter/things/${clientId}/#`);
+//   device.publish(
+//     `demeter/things/${clientId}/update`,
+//     JSON.stringify({ test_data: 1 })
+//   );
+// });
+
+// device.on("message", function (topic, payload) {
+//   console.log("message", topic, payload.toString());
+// });
+
 var thingShadows = awsIot.thingShadow({
   keyPath: process.env.AWS_PRIVATE_KEY_PATH,
   certPath: process.env.AWS_CERT_PATH,
@@ -35,20 +62,28 @@ thingShadows.on("connect", function () {
   // After connecting to the AWS IoT platform, register interest in the
   // Thing Shadow named 'RGBLedLamp'.
   //
-  console.log("device connected to AWS");
+  // console.log("shadow connected to AWS");
+  // thingShadows.subscribe(`demeter/things/${clientId}/#`);
+  // thingShadows.publish(
+  //   `demeter/things/${clientId}/update`,
+  //   JSON.stringify({ test_data: 1 })
+  // );
 
-  thingShadows.register("state", {}, function () {
+  thingShadows.register(clientId, {}, function () {
     // Once registration is complete, update the Thing Shadow named
     // 'RGBLedLamp' with the latest device state and save the clientToken
     // so that we can correlate it with status or timeout events.
     //
     // Thing shadow state
     //
+
+    console.log("shadow registered: " + clientId);
+
     var rgbLedLampState = {
       state: { desired: { red: rval, green: gval, blue: bval } },
     };
 
-    clientTokenUpdate = thingShadows.update("state", rgbLedLampState);
+    clientTokenUpdate = thingShadows.update(clientId, rgbLedLampState);
     //
     // The update method returns a clientToken; if non-null, this value will
     // be sent in a 'status' event when the operation completes, allowing you
@@ -61,6 +96,10 @@ thingShadows.on("connect", function () {
       console.log("update shadow failed, operation still in progress");
     }
   });
+});
+
+thingShadows.on("message", function (topic, payload) {
+  console.log("message", topic, payload.toString());
 });
 
 thingShadows.on("status", function (thingName, stat, clientToken, stateObject) {
